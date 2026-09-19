@@ -54,3 +54,444 @@
   .ref-card span{font-size:10px}
   .quick-strip span{font-size:10px;line-height:1.45}
 }
+/* =========================================================
+   MOBILE SIDEBAR / OFF-CANVAS NAVIGATION
+   ========================================================= */
+
+/* Desktop/mobile drawer helpers */
+.sidebar-overlay{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.42);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+  z-index:19;
+}
+
+.mobile-menu-btn{
+  display:none;
+  width:36px;
+  height:36px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#fff;
+  color:#475467;
+  place-items:center;
+  flex:none;
+}
+
+.mobile-menu-btn svg{
+  width:18px;
+  height:18px;
+}
+
+@media (max-width:760px){
+
+  /* Keep the sidebar available as an off-canvas drawer instead of
+     permanently hiding it. Add/remove .mobile-open from .sidebar
+     from the mobile menu button in React. */
+  .sidebar{
+    display:flex;
+    width:286px;
+    max-width:86vw;
+    right:auto;
+    transform:translateX(-105%);
+    transition:transform .24s ease,box-shadow .24s ease;
+    box-shadow:none;
+    z-index:40;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .sidebar.mobile-open{
+    transform:translateX(0);
+    box-shadow:14px 0 40px rgba(16,24,40,.18);
+  }
+
+  .sidebar.mobile-open + .sidebar-overlay,
+  .sidebar-overlay.mobile-open{
+    display:block;
+  }
+
+  .mobile-menu-btn{
+    display:grid;
+  }
+
+  /* Do not let desktop collapse styling destroy the mobile drawer */
+  .sidebar.collapsed{
+    width:286px;
+    max-width:86vw;
+    transform:translateX(-105%);
+  }
+
+  .sidebar.collapsed.mobile-open{
+    width:286px;
+    max-width:86vw;
+    transform:translateX(0);
+  }
+
+  .sidebar.collapsed .brand div,
+  .sidebar.collapsed .nav-item span,
+  .sidebar.collapsed .support-card,
+  .sidebar.collapsed .nav-label{
+    display:initial;
+  }
+
+  .sidebar.collapsed .side-top{
+    justify-content:space-between;
+  }
+
+  .sidebar.collapsed .nav-item{
+    justify-content:flex-start;
+    padding:0 12px;
+  }
+
+  .sidebar .side-top{
+    padding-bottom:22px;
+  }
+
+  .sidebar .nav-item{
+    height:45px;
+    font-size:14px;
+  }
+
+  .sidebar .support-card{
+    display:flex;
+  }
+
+  /* Mobile header */
+  .topbar{
+    position:sticky;
+    top:0;
+    z-index:30;
+  }
+
+  .mobile-logo{
+    display:flex;
+    align-items:center;
+    gap:9px;
+  }
+
+  .mobile-logo .brand{
+    gap:8px;
+  }
+
+  .mobile-logo .brand img{
+    width:30px;
+    height:30px;
+  }
+
+  .mobile-logo .brand b{
+    font-size:17px;
+  }
+
+  .mobile-logo .brand span{
+    font-size:8px;
+  }
+
+  .top-actions{
+    margin-left:auto;
+  }
+
+  .global-search,
+  .profile-text,
+  .profile>svg{
+    display:none;
+  }
+
+  .profile{
+    padding-left:0;
+  }
+
+  /* Page */
+  .main,
+  .sidebar.collapsed~.main{
+    margin-left:0;
+  }
+
+  .page{
+    width:100%;
+    padding:20px 14px 28px;
+  }
+
+  .page-intro{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:13px;
+  }
+
+  .page-intro h1{
+    font-size:25px;
+  }
+
+  .page-intro p:not(.eyebrow){
+    font-size:13px;
+    line-height:1.5;
+  }
+
+  .date-chip,
+  .patient-pill,
+  .success-chip{
+    width:100%;
+  }
+
+  /* Dashboard cards */
+  .stats-grid,
+  .referral-grid{
+    grid-template-columns:1fr;
+    gap:12px;
+  }
+
+  .stat-card{
+    min-height:138px;
+    padding:17px;
+  }
+
+  .stat-head{
+    font-size:13px;
+  }
+
+  .stat-value{
+    font-size:29px;
+    margin-top:14px;
+  }
+
+  .stat-sub{
+    font-size:10px;
+  }
+
+  .section-grid,
+  .billing-layout{
+    grid-template-columns:1fr;
+    gap:14px;
+  }
+
+  .panel,
+  .form-panel{
+    padding:17px;
+    border-radius:14px;
+  }
+
+  .panel-title h2{
+    font-size:15px;
+  }
+
+  .panel-title p{
+    font-size:10px;
+  }
+
+  .activity b,
+  .bill-meta b{
+    font-size:12px;
+  }
+
+  .activity span,
+  .bill-meta span{
+    font-size:10px;
+  }
+
+  .activity time{
+    font-size:9px;
+  }
+
+  /* Forms */
+  .form-panel{
+    padding:18px 16px;
+  }
+
+  .form-section-head h2{
+    font-size:16px;
+  }
+
+  .form-section-head p{
+    font-size:11px;
+    line-height:1.5;
+  }
+
+  .field>span{
+    font-size:11px;
+  }
+
+  .field-wrap input,
+  .field-wrap select,
+  .field input{
+    font-size:13px;
+  }
+
+  .form-grid.four,
+  .form-grid.three,
+  .form-grid.two,
+  .discount-grid{
+    grid-template-columns:1fr;
+  }
+
+  .phone-search{
+    grid-template-columns:1fr;
+  }
+
+  .form-footer{
+    justify-content:stretch;
+  }
+
+  .form-footer button{
+    flex:1;
+  }
+
+  /* Billing */
+  .payment-panel{
+    position:static;
+  }
+
+  .search-service{
+    height:44px;
+  }
+
+  /* Referral */
+  .ref-card{
+    min-height:140px;
+    padding:16px;
+  }
+
+  .ref-card b{
+    font-size:13px;
+  }
+
+  .ref-card span{
+    font-size:10px;
+  }
+
+  /* Quick strip */
+  .quick-strip{
+    align-items:flex-start;
+    gap:12px;
+    flex-direction:column;
+  }
+
+  .quick-strip .online{
+    align-self:flex-end;
+  }
+
+  .quick-strip span{
+    font-size:10px;
+    line-height:1.45;
+  }
+
+  /* Invoice */
+  .invoice{
+    padding:18px;
+    overflow-x:auto;
+  }
+
+  .invoice-bottom{
+    flex-direction:column;
+  }
+
+  .invoice-totals{
+    width:100%;
+  }
+
+  .invoice-table{
+    min-width:600px;
+  }
+
+  .bill-actions{
+    grid-template-columns:1fr 1fr;
+  }
+
+  /* Prevent long text/buttons from overflowing */
+  .panel-title,
+  .form-section-head,
+  .invoice-head,
+  .patient-invoice{
+    gap:12px;
+  }
+
+  .invoice-head,
+  .patient-invoice{
+    flex-wrap:wrap;
+  }
+
+  .placeholder{
+    min-height:55vh;
+    padding:20px 5px;
+  }
+
+  .empty-state{
+    padding:55px 20px;
+  }
+}
+
+/* Small phones */
+@media (max-width:420px){
+  .topbar{
+    padding:0 11px;
+  }
+
+  .page{
+    padding-left:11px;
+    padding-right:11px;
+  }
+
+  .mobile-logo .brand b{
+    font-size:16px;
+  }
+
+  .mobile-logo .brand span{
+    display:none;
+  }
+
+  .avatar{
+    width:32px;
+    height:32px;
+  }
+
+  .stat-card{
+    min-height:132px;
+  }
+
+  .panel,
+  .form-panel{
+    padding:15px;
+  }
+
+  .form-footer{
+    flex-direction:column-reverse;
+  }
+
+  .form-footer button{
+    width:100%;
+  }
+
+  .bill-actions{
+    grid-template-columns:1fr;
+  }
+
+  .invoice{
+    padding:14px;
+    border-radius:11px;
+  }
+
+  .invoice-brand b{
+    font-size:18px;
+  }
+}
+
+/* Accessibility / reduced motion */
+@media (prefers-reduced-motion:reduce){
+  .sidebar,
+  .stat-card,
+  .ref-card,
+  .action-card{
+    transition:none;
+  }
+}
+
+/* Printing should never include the off-canvas navigation */
+@media print{
+  .sidebar,
+  .sidebar-overlay,
+  .mobile-menu-btn{
+    display:none!important;
+  }
+}
