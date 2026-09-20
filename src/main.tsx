@@ -65,6 +65,7 @@ type ActivityItem = {
 
 type BillItem = {
   id: number
+  serviceId?: string
   name: string
   type: 'Test' | 'Package'
   rate: number
@@ -960,7 +961,11 @@ function Billing({
         ? services.filter(
             x =>
               x.status === 'Active' &&
-              x.name.toLowerCase().includes(q.toLowerCase())
+              (
+                x.name.toLowerCase().includes(q.toLowerCase()) ||
+                x.code.toLowerCase().includes(q.toLowerCase()) ||
+                x.category.toLowerCase().includes(q.toLowerCase())
+              )
           )
         : [],
     [q, services]
@@ -980,11 +985,20 @@ function Billing({
     final - Number(paid || 0)
   )
 
-  const add = (x: any) => {
+  const add = (x: ServiceItem) => {
     setItems(prev =>
-      prev.some(i => i.name === x.name)
+      prev.some(i => i.serviceId === x.id || i.name === x.name)
         ? prev
-        : [...prev, { ...x, id: Date.now() }]
+        : [
+            ...prev,
+            {
+              id: Date.now(),
+              serviceId: x.id,
+              name: x.name,
+              type: x.type,
+              rate: x.rate
+            }
+          ]
     )
 
     setQ('')
@@ -1009,7 +1023,8 @@ function Billing({
       by,
       final,
       paid: Number(paid || 0),
-      due
+      due,
+      createdAt: new Date().toISOString()
     }
 
     onBill(bill)
@@ -1933,10 +1948,37 @@ function ResultEntry({ bill, services, parameters, setPage }: { bill: any; servi
   const patient = bill?.patient || {}
   const items = (bill?.items || []).filter((x: BillItem) => x.type === 'Test')
   const rows: Array<{ item: BillItem; param: TestParameter }> = items.flatMap((item: BillItem) => {
-    const service = services.find((s: ServiceItem) => String(s.id) === String(item.id) || s.name === item.name || s.code === item.name)
-    return (parameters[service?.id || ''] || []).map((param: TestParameter) => ({ item, param }))
+    const service = services.find(
+      (s: ServiceItem) =>
+        (item.serviceId && String(s.id) === String(item.serviceId)) ||
+        s.name === item.name ||
+        s.code === item.name
+    )
+    return (parameters[service?.id || ''] || []).map(
+      (param: TestParameter) => ({ item, param })
+    )
   })
-  const setValue = (id: string, value: string) => { setValues(prev => ({ ...prev, [id]: value })); setSaved(false) }
+  useEffect(() => {
+    if (!bill?.id) return
+
+    try {
+      const saved = localStorage.getItem(`nusfaResults:${bill.id}`)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed?.values && typeof parsed.values === 'object') {
+          setValues(parsed.values)
+          setSaved(true)
+        }
+      }
+    } catch {
+      // Ignore invalid legacy result data.
+    }
+  }, [bill?.id])
+
+  const setValue = (id: string, value: string) => {
+    setValues(prev => ({ ...prev, [id]: value }))
+    setSaved(false)
+  }
   const saveResults = () => {
     if (!bill) return
     const payload = { billId: bill.id, patient, values, savedAt: new Date().toISOString() }
