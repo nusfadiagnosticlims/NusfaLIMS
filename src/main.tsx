@@ -46,6 +46,7 @@ type Page =
   | 'registration'
   | 'billing'
   | 'bill'
+  | 'result'
   | 'referral'
   | 'addReferral'
   | 'patients'
@@ -79,6 +80,27 @@ type ServiceItem = {
   rate: number
   status: 'Active' | 'Inactive'
 }
+
+type ResultType =
+  | 'Number'
+  | 'Decimal'
+  | 'Positive / Negative'
+  | 'Reactive / Non-Reactive'
+  | 'Dropdown'
+
+type TestParameter = {
+  id: string
+  name: string
+  code: string
+  unit: string
+  resultType: ResultType
+  options: string[]
+  min: string
+  max: string
+  referenceText: string
+}
+
+type TestParametersMap = Record<string, TestParameter[]>
 
 const initialServices: ServiceItem[] = [
   {
@@ -192,6 +214,20 @@ const initialServices: ServiceItem[] = [
     status: 'Active'
   }
 ]
+
+const initialTestParameters: TestParametersMap = {
+  'TST-001': [
+    { id: 'CBC-HB', name: 'Hemoglobin', code: 'HB', unit: 'g/dL', resultType: 'Decimal', options: [], min: '13', max: '17', referenceText: '13–17 g/dL' },
+    { id: 'CBC-RBC', name: 'RBC Count', code: 'RBC', unit: 'million/µL', resultType: 'Decimal', options: [], min: '4.5', max: '5.5', referenceText: '4.5–5.5 million/µL' },
+    { id: 'CBC-WBC', name: 'Total WBC Count', code: 'WBC', unit: '/µL', resultType: 'Number', options: [], min: '4000', max: '11000', referenceText: '4,000–11,000 /µL' },
+    { id: 'CBC-PLT', name: 'Platelet Count', code: 'PLT', unit: '/µL', resultType: 'Number', options: [], min: '150000', max: '450000', referenceText: '150,000–450,000 /µL' },
+    { id: 'CBC-NEU', name: 'Neutrophils', code: 'NEU', unit: '%', resultType: 'Decimal', options: [], min: '40', max: '75', referenceText: '40–75 %' },
+    { id: 'CBC-LYM', name: 'Lymphocytes', code: 'LYM', unit: '%', resultType: 'Decimal', options: [], min: '20', max: '45', referenceText: '20–45 %' },
+    { id: 'CBC-MONO', name: 'Monocytes', code: 'MONO', unit: '%', resultType: 'Decimal', options: [], min: '2', max: '10', referenceText: '2–10 %' },
+    { id: 'CBC-EOS', name: 'Eosinophils', code: 'EOS', unit: '%', resultType: 'Decimal', options: [], min: '1', max: '6', referenceText: '1–6 %' },
+    { id: 'CBC-BASO', name: 'Basophils', code: 'BASO', unit: '%', resultType: 'Decimal', options: [], min: '0', max: '2', referenceText: '0–2 %' }
+  ]
+}
 
 const initialActivities: ActivityItem[] = [
   {
@@ -335,6 +371,7 @@ function Header({
     registration: 'New Registration',
     billing: 'Billing',
     bill: 'Bill Preview',
+    result: 'Enter Result',
     referral: 'Referral',
     addReferral: 'Add Referral',
     patients: 'Patients',
@@ -1410,11 +1447,7 @@ function BillPreview({
         <div className="bill-actions">
           <button
             className="action-card"
-            onClick={() =>
-              alert(
-                'Result entry workflow is ready for the next phase.'
-              )
-            }
+            onClick={() => setPage('result')}
           >
             <FileCheck2 />
             <b>Enter Result</b>
@@ -1767,10 +1800,14 @@ function AddReferral({
 function TestsPage({
   services,
   setServices,
+  parameters,
+  setParameters,
   setPage
 }: {
   services: ServiceItem[]
   setServices: React.Dispatch<React.SetStateAction<ServiceItem[]>>
+  parameters: TestParametersMap
+  setParameters: React.Dispatch<React.SetStateAction<TestParametersMap>>
   setPage: (p: Page) => void
 }) {
   const [query, setQuery] = useState('')
@@ -1778,458 +1815,153 @@ function TestsPage({
   const [status, setStatus] = useState('All')
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [parameterDrafts, setParameterDrafts] = useState<TestParameter[]>([])
   const [form, setForm] = useState({
-    code: '',
-    name: '',
-    category: 'Hematology',
-    sample: 'Serum',
-    rate: '',
-    status: 'Active' as 'Active' | 'Inactive'
+    code: '', name: '', category: 'Hematology', sample: 'Serum', rate: '', status: 'Active' as 'Active' | 'Inactive'
   })
 
   const testsOnly = services.filter(x => x.type === 'Test')
   const categories = Array.from(new Set(testsOnly.map(x => x.category))).sort()
-
   const filteredTests = testsOnly.filter(test => {
     const q = query.trim().toLowerCase()
-    const matchesQuery =
-      !q ||
-      test.name.toLowerCase().includes(q) ||
-      test.code.toLowerCase().includes(q) ||
-      test.category.toLowerCase().includes(q)
-
-    const matchesCategory = category === 'All' || test.category === category
-    const matchesStatus = status === 'All' || test.status === status
-
-    return matchesQuery && matchesCategory && matchesStatus
+    return (!q || test.name.toLowerCase().includes(q) || test.code.toLowerCase().includes(q) || test.category.toLowerCase().includes(q)) &&
+      (category === 'All' || test.category === category) && (status === 'All' || test.status === status)
   })
-
   const activeCount = testsOnly.filter(x => x.status === 'Active').length
   const inactiveCount = testsOnly.filter(x => x.status === 'Inactive').length
 
+  const blankParameter = (): TestParameter => ({
+    id: `PARAM-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: '', code: '', unit: '', resultType: 'Number', options: [], min: '', max: '', referenceText: ''
+  })
   const resetForm = () => {
-    setForm({
-      code: '',
-      name: '',
-      category: 'Hematology',
-      sample: 'Serum',
-      rate: '',
-      status: 'Active'
-    })
+    setForm({ code: '', name: '', category: 'Hematology', sample: 'Serum', rate: '', status: 'Active' })
     setEditingId(null)
+    setParameterDrafts([])
   }
-
-  const openAdd = () => {
-    resetForm()
-    setShowForm(true)
-  }
-
+  const openAdd = () => { resetForm(); setParameterDrafts([]); setShowForm(true) }
   const openEdit = (test: ServiceItem) => {
     setEditingId(test.id)
-    setForm({
-      code: test.code,
-      name: test.name,
-      category: test.category,
-      sample: test.sample,
-      rate: String(test.rate),
-      status: test.status
-    })
+    setForm({ code: test.code, name: test.name, category: test.category, sample: test.sample, rate: String(test.rate), status: test.status })
+    setParameterDrafts((parameters[test.id] || []).map(x => ({ ...x, options: [...x.options] })))
     setShowForm(true)
   }
-
   const saveTest = () => {
-    const name = form.name.trim()
-    const code = form.code.trim().toUpperCase()
-    const rate = Number(form.rate)
-
-    if (!name || !code || !form.category || !form.sample || !rate) {
+    const name = form.name.trim(), code = form.code.trim().toUpperCase(), rate = Number(form.rate)
+    if (!name || !code || !form.category || !form.sample || rate <= 0) {
       alert('Please fill Test Code, Test Name, Category, Sample Type and Price.')
       return
     }
-
+    const duplicate = testsOnly.some(item => item.id !== editingId && item.code.toLowerCase() === code.toLowerCase())
+    if (duplicate) { alert('A test with this code already exists.'); return }
+    let savedId = editingId
     if (editingId) {
-      setServices(prev =>
-        prev.map(item =>
-          item.id === editingId
-            ? {
-                ...item,
-                code,
-                name,
-                category: form.category,
-                sample: form.sample,
-                rate,
-                status: form.status
-              }
-            : item
-        )
-      )
+      setServices(prev => prev.map(item => item.id === editingId ? { ...item, code, name, category: form.category, sample: form.sample, rate, status: form.status } : item))
     } else {
-      const duplicate = testsOnly.some(
-        item => item.code.toLowerCase() === code.toLowerCase()
-      )
-
-      if (duplicate) {
-        alert('A test with this code already exists.')
-        return
-      }
-
-      setServices(prev => [
-        ...prev,
-        {
-          id: `TST-${Date.now()}`,
-          code,
-          name,
-          type: 'Test',
-          category: form.category,
-          sample: form.sample,
-          rate,
-          status: form.status
-        }
-      ])
+      savedId = `TST-${Date.now()}`
+      setServices(prev => [...prev, { id: savedId!, code, name, type: 'Test', category: form.category, sample: form.sample, rate, status: form.status }])
     }
-
-    setShowForm(false)
-    resetForm()
+    if (savedId) setParameters(prev => ({ ...prev, [savedId!]: parameterDrafts.filter(p => p.name.trim()).map(p => ({ ...p, name: p.name.trim(), code: p.code.trim().toUpperCase(), options: p.options.filter(Boolean) })) }))
+    setShowForm(false); resetForm()
   }
-
   const deleteTest = (id: string) => {
-    const test = services.find(x => x.id === id)
-    if (!test) return
-
+    const test = services.find(x => x.id === id); if (!test) return
     if (window.confirm(`Delete "${test.name}"?`)) {
       setServices(prev => prev.filter(item => item.id !== id))
+      setParameters(prev => { const next = { ...prev }; delete next[id]; return next })
     }
   }
-
-  const toggleStatus = (id: string) => {
-    setServices(prev =>
-      prev.map(item =>
-        item.id === id && item.type === 'Test'
-          ? {
-              ...item,
-              status: item.status === 'Active' ? 'Inactive' : 'Active'
-            }
-          : item
-      )
-    )
-  }
+  const toggleStatus = (id: string) => setServices(prev => prev.map(item => item.id === id && item.type === 'Test' ? { ...item, status: item.status === 'Active' ? 'Inactive' : 'Active' } : item))
+  const addParameter = () => setParameterDrafts(prev => [...prev, blankParameter()])
+  const updateParameter = (id: string, patch: Partial<TestParameter>) => setParameterDrafts(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))
+  const removeParameter = (id: string) => setParameterDrafts(prev => prev.filter(p => p.id !== id))
+  const updateOptions = (id: string, value: string) => updateParameter(id, { options: value.split(',').map(x => x.trim()).filter(Boolean) })
 
   return (
     <div className="page tests-page">
-      <div className="page-intro">
-        <div>
-          <p className="eyebrow">LAB CATALOGUE</p>
-          <h1>Tests</h1>
-          <p>Manage laboratory tests, pricing, samples and availability.</p>
-        </div>
-
-        <button className="primary-btn" onClick={openAdd}>
-          <Plus /> Add new test
-        </button>
-      </div>
-
+      <div className="page-intro"><div><p className="eyebrow">LAB CATALOGUE</p><h1>Tests</h1><p>Manage laboratory tests, pricing, samples, parameters and reporting fields.</p></div><button className="primary-btn" onClick={openAdd}><Plus /> Add new test</button></div>
       <div className="tests-summary">
-        <div className="tests-summary-card">
-          <div className="tests-summary-icon blue">
-            <TestTube2 />
-          </div>
-          <div>
-            <span>Total tests</span>
-            <strong>{testsOnly.length}</strong>
-          </div>
-        </div>
-
-        <div className="tests-summary-card">
-          <div className="tests-summary-icon green">
-            <Check />
-          </div>
-          <div>
-            <span>Active</span>
-            <strong>{activeCount}</strong>
-          </div>
-        </div>
-
-        <div className="tests-summary-card">
-          <div className="tests-summary-icon amber">
-            <Clock3 />
-          </div>
-          <div>
-            <span>Inactive</span>
-            <strong>{inactiveCount}</strong>
-          </div>
-        </div>
+        <div className="tests-summary-card"><div className="tests-summary-icon blue"><TestTube2 /></div><div><span>Total tests</span><strong>{testsOnly.length}</strong></div></div>
+        <div className="tests-summary-card"><div className="tests-summary-icon green"><Check /></div><div><span>Active</span><strong>{activeCount}</strong></div></div>
+        <div className="tests-summary-card"><div className="tests-summary-icon amber"><Clock3 /></div><div><span>Inactive</span><strong>{inactiveCount}</strong></div></div>
       </div>
 
-      {showForm && (
-        <section className="form-panel test-form-panel">
-          <div className="form-section-head">
-            <div>
-              <h2>{editingId ? 'Edit test' : 'Add new test'}</h2>
-              <p>
-                {editingId
-                  ? 'Update the selected test and save the changes.'
-                  : 'Create a test that will also be available in billing.'}
-              </p>
-            </div>
+      {showForm && <section className="form-panel test-form-panel">
+        <div className="form-section-head"><div><h2>{editingId ? 'Edit test' : 'Add new test'}</h2><p>Configure the test and the exact parameters that will appear during result entry.</p></div><button className="mini-icon" onClick={() => { setShowForm(false); resetForm() }}><X /></button></div>
+        <div className="form-grid three">
+          <Field label="Test Code" required value={form.code} onChange={v => setForm({ ...form, code: v })} placeholder="e.g. CBC" />
+          <Field label="Test Name" required value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="e.g. Complete Blood Count" />
+          <label className="field"><span>Category *</span><div className="field-wrap"><select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>{['Hematology','Biochemistry','Hormones','Diabetes','Vitamins','Clinical Pathology','Microbiology','Immunology','Other'].map(x => <option key={x}>{x}</option>)}</select><ChevronDown /></div></label>
+          <label className="field"><span>Sample Type *</span><div className="field-wrap"><select value={form.sample} onChange={e => setForm({ ...form, sample: e.target.value })}>{['Serum','EDTA Blood','Whole Blood','Plasma','Urine','Stool','Swab','Multiple'].map(x => <option key={x}>{x}</option>)}</select><ChevronDown /></div></label>
+          <Field label="Price" required value={form.rate} onChange={v => setForm({ ...form, rate: v })} placeholder="e.g. 450" type="number" right={<span className="input-prefix">₹</span>} />
+          <label className="field"><span>Status</span><div className="field-wrap"><select value={form.status} onChange={e => setForm({ ...form, status: e.target.value as 'Active' | 'Inactive' })}><option>Active</option><option>Inactive</option></select><ChevronDown /></div></label>
+        </div>
 
-            <button className="mini-icon" onClick={() => setShowForm(false)}>
-              <X />
-            </button>
-          </div>
-
-          <div className="form-grid three">
-            <Field
-              label="Test Code"
-              required
-              value={form.code}
-              onChange={v => setForm({ ...form, code: v })}
-              placeholder="e.g. CBC"
-            />
-
-            <Field
-              label="Test Name"
-              required
-              value={form.name}
-              onChange={v => setForm({ ...form, name: v })}
-              placeholder="e.g. Complete Blood Count"
-            />
-
-            <label className="field">
-              <span>Category *</span>
-              <div className="field-wrap">
-                <select
-                  value={form.category}
-                  onChange={e =>
-                    setForm({ ...form, category: e.target.value })
-                  }
-                >
-                  {[
-                    'Hematology',
-                    'Biochemistry',
-                    'Hormones',
-                    'Diabetes',
-                    'Vitamins',
-                    'Clinical Pathology',
-                    'Microbiology',
-                    'Immunology',
-                    'Other'
-                  ].map(x => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-                <ChevronDown />
+        <div style={{ marginTop: 24, paddingTop: 22, borderTop: '1px solid var(--border, #e8edf3)' }}>
+          <div className="form-section-head"><div><h2>Test Parameters</h2><p>These fields are saved with this test and automatically become the result-entry form.</p></div><button className="secondary-btn" onClick={addParameter}><Plus /> Add parameter</button></div>
+          {parameterDrafts.length === 0 ? <div className="tests-empty" style={{ padding: 24, marginTop: 12 }}><TestTube2 /><b>No parameters added</b><span>Add parameters such as Hemoglobin, WBC, Platelets, etc.</span></div> : <div style={{ display: 'grid', gap: 14, marginTop: 12 }}>
+            {parameterDrafts.map((p, index) => <div key={p.id} style={{ border: '1px solid var(--border, #e8edf3)', borderRadius: 14, padding: 16, background: 'var(--surface, #fff)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12 }}><b>Parameter {index + 1}</b><button className="mini-icon danger" title="Delete parameter" onClick={() => removeParameter(p.id)}><Trash2 /></button></div>
+              <div className="form-grid three">
+                <Field label="Parameter Name" required value={p.name} onChange={v => updateParameter(p.id, { name: v })} placeholder="e.g. Hemoglobin" />
+                <Field label="Parameter Code" value={p.code} onChange={v => updateParameter(p.id, { code: v })} placeholder="e.g. HB" />
+                <Field label="Unit" value={p.unit} onChange={v => updateParameter(p.id, { unit: v })} placeholder="e.g. g/dL" />
+                <label className="field"><span>Result Type *</span><div className="field-wrap"><select value={p.resultType} onChange={e => updateParameter(p.id, { resultType: e.target.value as ResultType })}><option>Number</option><option>Decimal</option><option>Positive / Negative</option><option>Reactive / Non-Reactive</option><option>Dropdown</option></select><ChevronDown /></div></label>
+                <Field label="Min" value={p.min} onChange={v => updateParameter(p.id, { min: v })} placeholder="e.g. 13" type="number" />
+                <Field label="Max" value={p.max} onChange={v => updateParameter(p.id, { max: v })} placeholder="e.g. 17" type="number" />
+                <Field label="Reference Range" value={p.referenceText} onChange={v => updateParameter(p.id, { referenceText: v })} placeholder="e.g. 13–17 g/dL" />
+                {p.resultType === 'Dropdown' && <Field label="Dropdown Options" value={p.options.join(', ')} onChange={v => updateOptions(p.id, v)} placeholder="e.g. Clear, Pale Yellow, Dark Yellow" />}
               </div>
-            </label>
-
-            <label className="field">
-              <span>Sample Type *</span>
-              <div className="field-wrap">
-                <select
-                  value={form.sample}
-                  onChange={e =>
-                    setForm({ ...form, sample: e.target.value })
-                  }
-                >
-                  {[
-                    'Serum',
-                    'EDTA Blood',
-                    'Whole Blood',
-                    'Plasma',
-                    'Urine',
-                    'Stool',
-                    'Swab',
-                    'Multiple'
-                  ].map(x => (
-                    <option key={x}>{x}</option>
-                  ))}
-                </select>
-                <ChevronDown />
-              </div>
-            </label>
-
-            <Field
-              label="Price"
-              required
-              value={form.rate}
-              onChange={v => setForm({ ...form, rate: v })}
-              placeholder="e.g. 450"
-              type="number"
-              right={<span className="input-prefix">₹</span>}
-            />
-
-            <label className="field">
-              <span>Status</span>
-              <div className="field-wrap">
-                <select
-                  value={form.status}
-                  onChange={e =>
-                    setForm({
-                      ...form,
-                      status: e.target.value as 'Active' | 'Inactive'
-                    })
-                  }
-                >
-                  <option>Active</option>
-                  <option>Inactive</option>
-                </select>
-                <ChevronDown />
-              </div>
-            </label>
-          </div>
-
-          <div className="form-footer">
-            <button
-              className="secondary-btn"
-              onClick={() => {
-                setShowForm(false)
-                resetForm()
-              }}
-            >
-              Cancel
-            </button>
-
-            <button className="primary-btn" onClick={saveTest}>
-              <Check /> {editingId ? 'Update test' : 'Save test'}
-            </button>
-          </div>
-        </section>
-      )}
+            </div>)}
+          </div>}
+        </div>
+        <div className="form-footer"><button className="secondary-btn" onClick={() => { setShowForm(false); resetForm() }}>Cancel</button><button className="primary-btn" onClick={saveTest}><Check /> {editingId ? 'Update test' : 'Save test'}</button></div>
+      </section>}
 
       <section className="panel tests-panel">
-        <div className="tests-toolbar">
-          <div className="search-service tests-search">
-            <Search />
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search by test name, code or category…"
-            />
-          </div>
-
-          <label className="filter-select">
-            <span>Category</span>
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-            >
-              <option>All</option>
-              {categories.map(x => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-            <ChevronDown />
-          </label>
-
-          <label className="filter-select">
-            <span>Status</span>
-            <select value={status} onChange={e => setStatus(e.target.value)}>
-              <option>All</option>
-              <option>Active</option>
-              <option>Inactive</option>
-            </select>
-            <ChevronDown />
-          </label>
-        </div>
-
-        <div className="tests-table-wrap">
-          <table className="tests-table">
-            <thead>
-              <tr>
-                <th>Test</th>
-                <th>Code</th>
-                <th>Category</th>
-                <th>Sample</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredTests.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="tests-empty">
-                      <TestTube2 />
-                      <b>No tests found</b>
-                      <span>Try another search or add a new test.</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredTests.map(test => (
-                  <tr key={test.id}>
-                    <td>
-                      <div className="test-name-cell">
-                        <div className="test-row-icon">
-                          <TestTube2 />
-                        </div>
-                        <div>
-                          <b>{test.name}</b>
-                          <span>{test.type}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="test-code">{test.code}</span>
-                    </td>
-                    <td>{test.category}</td>
-                    <td>{test.sample}</td>
-                    <td>
-                      <strong>
-                        ₹{test.rate.toLocaleString('en-IN')}
-                      </strong>
-                    </td>
-                    <td>
-                      <button
-                        className={
-                          'status-pill ' +
-                          (test.status === 'Active' ? 'active' : 'inactive')
-                        }
-                        onClick={() => toggleStatus(test.id)}
-                        title="Click to change status"
-                      >
-                        <i />
-                        {test.status}
-                      </button>
-                    </td>
-                    <td>
-                      <div className="test-actions">
-                        <button
-                          className="mini-icon"
-                          title="Edit test"
-                          onClick={() => openEdit(test)}
-                        >
-                          <Settings2 />
-                        </button>
-                        <button
-                          className="mini-icon danger"
-                          title="Delete test"
-                          onClick={() => deleteTest(test.id)}
-                        >
-                          <Trash2 />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="tests-footer">
-          <span>
-            Showing <b>{filteredTests.length}</b> of{' '}
-            <b>{testsOnly.length}</b> tests
-          </span>
-          <button className="text-btn" onClick={() => setPage('billing')}>
-            Open billing <ArrowRight />
-          </button>
-        </div>
+        <div className="tests-toolbar"><div className="search-service tests-search"><Search /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by test name, code or category…" /></div><label className="filter-select"><span>Category</span><select value={category} onChange={e => setCategory(e.target.value)}><option>All</option>{categories.map(x => <option key={x}>{x}</option>)}</select><ChevronDown /></label><label className="filter-select"><span>Status</span><select value={status} onChange={e => setStatus(e.target.value)}><option>All</option><option>Active</option><option>Inactive</option></select><ChevronDown /></label></div>
+        <div className="tests-table-wrap"><table className="tests-table"><thead><tr><th>Test</th><th>Code</th><th>Category</th><th>Sample</th><th>Price</th><th>Parameters</th><th>Status</th><th>Actions</th></tr></thead><tbody>{filteredTests.length === 0 ? <tr><td colSpan={8}><div className="tests-empty"><TestTube2 /><b>No tests found</b><span>Try another search or add a new test.</span></div></td></tr> : filteredTests.map(test => <tr key={test.id}><td><div className="test-name-cell"><div className="test-row-icon"><TestTube2 /></div><div><b>{test.name}</b><span>{test.type}</span></div></div></td><td><span className="test-code">{test.code}</span></td><td>{test.category}</td><td>{test.sample}</td><td><strong>₹{test.rate.toLocaleString('en-IN')}</strong></td><td><span className="count-badge">{(parameters[test.id] || []).length}</span></td><td><button className={'status-pill ' + (test.status === 'Active' ? 'active' : 'inactive')} onClick={() => toggleStatus(test.id)}><i />{test.status}</button></td><td><div className="test-actions"><button className="mini-icon" title="Edit test and parameters" onClick={() => openEdit(test)}><Settings2 /></button><button className="mini-icon danger" title="Delete test" onClick={() => deleteTest(test.id)}><Trash2 /></button></div></td></tr>)}</tbody></table></div>
+        <div className="tests-footer"><span>Showing <b>{filteredTests.length}</b> of <b>{testsOnly.length}</b> tests</span><button className="text-btn" onClick={() => setPage('billing')}>Open billing <ArrowRight /></button></div>
       </section>
     </div>
   )
+}
+
+function ResultEntry({ bill, services, parameters, setPage }: { bill: any; services: ServiceItem[]; parameters: TestParametersMap; setPage: (p: Page) => void }) {
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [saved, setSaved] = useState(false)
+  const patient = bill?.patient || {}
+  const items = (bill?.items || []).filter((x: BillItem) => x.type === 'Test')
+  const rows = items.flatMap((item: BillItem) => {
+    const service = services.find(s => s.id === item.id || s.name === item.name || s.code === item.name)
+    return (parameters[service?.id || ''] || []).map(param => ({ item, param }))
+  })
+  const setValue = (id: string, value: string) => { setValues(prev => ({ ...prev, [id]: value })); setSaved(false) }
+  const saveResults = () => {
+    if (!bill) return
+    const payload = { billId: bill.id, patient, values, savedAt: new Date().toISOString() }
+    localStorage.setItem(`nusfaResults:${bill.id}`, JSON.stringify(payload))
+    setSaved(true)
+  }
+  if (!bill) return <div className="page"><div className="empty-state"><FileCheck2 /><h2>No report selected</h2><button className="primary-btn" onClick={() => setPage('dashboard')}>Back to dashboard</button></div></div>
+  return <div className="page">
+    <div className="page-intro"><div><p className="eyebrow">RESULT ENTRY</p><h1>Enter patient results</h1><p>{patient.first || 'Patient'} {patient.last || ''} · {bill.id}</p></div><span className="success-chip">{saved ? <><Check /> Saved</> : <><FileCheck2 /> Draft</>}</span></div>
+    <section className="form-panel">
+      <div className="form-section-head"><div><h2>Test results</h2><p>Fields below are generated from the parameters configured for the billed tests.</p></div></div>
+      {rows.length === 0 ? <div className="tests-empty" style={{ padding: 30 }}><FileCheck2 /><b>No parameters configured</b><span>Open Tests → Edit test → Test Parameters to add reporting fields.</span><button className="secondary-btn" onClick={() => setPage('tests')}>Configure parameters</button></div> : <div style={{ display: 'grid', gap: 12 }}>
+        {rows.map(({ item, param }) => <div key={`${item.id}-${param.id}`} style={{ border: '1px solid var(--border, #e8edf3)', borderRadius: 14, padding: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px,1.2fr) minmax(160px,1fr) minmax(100px,.7fr)', gap: 14, alignItems: 'end' }}>
+            <div><span style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{param.name}</span><small style={{ opacity: .65 }}>{item.name}{param.code ? ` · ${param.code}` : ''}</small></div>
+            <label className="field"><span>Result</span><div className="field-wrap">
+              {param.resultType === 'Dropdown' ? <select value={values[`${item.id}-${param.id}`] || ''} onChange={e => setValue(`${item.id}-${param.id}`, e.target.value)}><option value="">Select result</option>{param.options.map(o => <option key={o}>{o}</option>)}</select> : param.resultType === 'Positive / Negative' ? <select value={values[`${item.id}-${param.id}`] || ''} onChange={e => setValue(`${item.id}-${param.id}`, e.target.value)}><option value="">Select</option><option>Positive</option><option>Negative</option></select> : param.resultType === 'Reactive / Non-Reactive' ? <select value={values[`${item.id}-${param.id}`] || ''} onChange={e => setValue(`${item.id}-${param.id}`, e.target.value)}><option value="">Select</option><option>Reactive</option><option>Non-Reactive</option></select> : <input type={param.resultType === 'Number' || param.resultType === 'Decimal' ? 'number' : 'text'} step={param.resultType === 'Decimal' ? 'any' : '1'} value={values[param.id] || ''} onChange={e => setValue(`${item.id}-${param.id}`, e.target.value)} placeholder={param.resultType} />}
+            </div></label>
+            <div style={{ paddingBottom: 8 }}><small style={{ display: 'block', opacity: .65 }}>{param.unit || '—'}</small><b style={{ fontSize: 12 }}>{param.referenceText || (param.min || param.max ? `${param.min || '—'} – ${param.max || '—'}` : 'No range')}</b></div>
+          </div>
+        </div>)}
+      </div>}
+      <div className="form-footer"><button className="secondary-btn" onClick={() => setPage('bill')}><ArrowLeft /> Back to bill</button>{rows.length > 0 && <button className="primary-btn" onClick={saveResults}><Check /> Save results</button>}</div>
+    </section>
+  </div>
 }
 
 function Placeholder({
@@ -2285,9 +2017,22 @@ function App() {
     }
   })
 
+  const [parameters, setParameters] = useState<TestParametersMap>(() => {
+    try {
+      const saved = localStorage.getItem('nusfaTestParameters')
+      return saved ? { ...initialTestParameters, ...JSON.parse(saved) } : initialTestParameters
+    } catch {
+      return initialTestParameters
+    }
+  })
+
   useEffect(() => {
     localStorage.setItem('nusfaServices', JSON.stringify(services))
   }, [services])
+
+  useEffect(() => {
+    localStorage.setItem('nusfaTestParameters', JSON.stringify(parameters))
+  }, [parameters])
 
   const [bill, setBill] = useState<any>(null)
 
@@ -2354,6 +2099,15 @@ function App() {
           />
         )}
 
+        {page === 'result' && (
+          <ResultEntry
+            bill={bill}
+            services={services}
+            parameters={parameters}
+            setPage={setPage}
+          />
+        )}
+
         {page === 'referral' && (
           <Referral setPage={setPage} />
         )}
@@ -2374,6 +2128,8 @@ function App() {
           <TestsPage
             services={services}
             setServices={setServices}
+            parameters={parameters}
+            setParameters={setParameters}
             setPage={setPage}
           />
         )}

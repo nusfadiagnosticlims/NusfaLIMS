@@ -832,3 +832,310 @@
     padding:17px;
   }
 }
+
+
+/* =========================================================
+   Nusfa LIMS — Test Parameters & Result Entry
+   Final responsive styles
+   ========================================================= */
+
+.test-parameters-section{
+  margin-top:24px;
+  padding-top:22px;
+  border-top:1px solid #eef1f4;
+}
+
+.test-parameter-list{
+  display:grid;
+  gap:14px;
+  margin-top:12px;
+}
+
+.test-parameter-card{
+  border:1px solid #e8edf3;
+  border-radius:14px;
+  padding:16px;
+  background:#fff;
+}
+
+.test-parameter-card:hover{
+  border-color:#d5e1ee;
+}
+
+.test-parameter-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.test-parameter-head b{
+  font-size:12px;
+  color:#344054;
+}
+
+.test-parameter-grid{
+  display:grid;
+  grid-template-columns:1.4fr .8fr .9fr 1.1fr;
+  gap:14px;
+}
+
+.test-parameter-range{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.test-parameter-options{
+  margin-top:14px;
+}
+
+.parameter-count{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:27px;
+  height:25px;
+  padding:0 7px;
+  border-radius:7px;
+  background:#eaf3ff;
+  color:var(--blue);
+  font-size:10px;
+  font-weight:800;
+}
+
+.result-page{
+  max-width:1050px;
+}
+
+.result-entry-panel{
+  padding:22px;
+}
+
+.result-test-block{
+  border:1px solid #e4e9ef;
+  border-radius:14px;
+  overflow:hidden;
+  background:#fff;
+}
+
+.result-test-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:14px 16px;
+  background:#f8fafc;
+  border-bottom:1px solid #e8edf2;
+}
+
+.result-test-head>div{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.result-test-icon{
+  width:34px;
+  height:34px;
+  flex:none;
+  display:grid;
+  place-items:center;
+  border-radius:9px;
+  background:#eaf3ff;
+  color:var(--blue);
+}
+
+.result-test-icon svg{
+  width:17px;
+}
+
+.result-test-title b{
+  display:block;
+  color:#344054;
+  font-size:12px;
+}
+
+.result-test-title span{
+  display:block;
+  color:#98a2b3;
+  font-size:9px;
+  margin-top:3px;
+}
+
+.result-rows{
+  display:grid;
+}
+
+.result-row{
+  display:grid;
+  grid-template-columns:minmax(190px,1.2fr) minmax(170px,1fr) minmax(105px,.7fr);
+  align-items:center;
+  gap:16px;
+  padding:14px 16px;
+  border-bottom:1px solid #f0f2f5;
+}
+
+.result-row:last-child{
+  border-bottom:0;
+}
+
+.result-parameter b{
+  display:block;
+  color:#344054;
+  font-size:12px;
+}
+
+.result-parameter span{
+  display:block;
+  color:#98a2b3;
+  font-size:9px;
+  margin-top:4px;
+}
+
+.result-input{
+  min-width:0;
+}
+
+.result-input input,
+.result-input select{
+  width:100%;
+  height:42px;
+  border:1px solid #dfe4eb;
+  border-radius:9px;
+  outline:0;
+  padding:0 11px;
+  background:#fff;
+  color:#344054;
+  font-size:12px;
+}
+
+.result-input input:focus,
+.result-input select:focus{
+  border-color:#8ab9ec;
+  box-shadow:0 0 0 3px #eaf3ff;
+}
+
+.result-unit{
+  color:#667085;
+  font-size:11px;
+  line-height:1.45;
+}
+
+.result-unit strong{
+  display:block;
+  color:#344054;
+  font-size:10px;
+  margin-bottom:3px;
+}
+
+.result-reference{
+  color:#98a2b3;
+  font-size:9px;
+}
+
+.result-reference b{
+  color:#667085;
+}
+
+.result-empty{
+  padding:30px 20px;
+}
+
+.result-save-status{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+}
+
+.result-save-status svg{
+  width:14px;
+}
+
+@media (max-width:900px){
+  .test-parameter-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .result-row{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .result-unit{
+    grid-column:2;
+  }
+}
+
+@media (max-width:700px){
+  .test-parameter-grid{
+    grid-template-columns:1fr;
+  }
+
+  .test-parameter-range{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .test-parameter-card{
+    padding:14px;
+  }
+
+  .test-parameter-head{
+    align-items:flex-start;
+  }
+
+  .result-entry-panel{
+    padding:16px;
+  }
+
+  .result-test-head{
+    padding:12px 13px;
+    align-items:flex-start;
+  }
+
+  .result-row{
+    grid-template-columns:1fr;
+    gap:9px;
+    padding:13px;
+  }
+
+  .result-unit{
+    grid-column:auto;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+  }
+
+  .result-unit strong{
+    margin:0;
+  }
+
+  .result-reference{
+    margin-left:auto;
+  }
+}
+
+@media (max-width:420px){
+  .test-parameter-range{
+    grid-template-columns:1fr;
+  }
+
+  .test-parameter-card{
+    padding:12px;
+    border-radius:12px;
+  }
+
+  .result-entry-panel{
+    padding:13px;
+  }
+
+  .result-test-head{
+    padding:11px;
+  }
+
+  .result-row{
+    padding:12px 11px;
+  }
+}
