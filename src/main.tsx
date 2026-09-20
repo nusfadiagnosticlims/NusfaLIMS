@@ -1932,9 +1932,9 @@ function ResultEntry({ bill, services, parameters, setPage }: { bill: any; servi
   const [saved, setSaved] = useState(false)
   const patient = bill?.patient || {}
   const items = (bill?.items || []).filter((x: BillItem) => x.type === 'Test')
-  const rows = items.flatMap((item: BillItem) => {
-    const service = services.find(s => s.id === item.id || s.name === item.name || s.code === item.name)
-    return (parameters[service?.id || ''] || []).map(param => ({ item, param }))
+  const rows: Array<{ item: BillItem; param: TestParameter }> = items.flatMap((item: BillItem) => {
+    const service = services.find((s: ServiceItem) => String(s.id) === String(item.id) || s.name === item.name || s.code === item.name)
+    return (parameters[service?.id || ''] || []).map((param: TestParameter) => ({ item, param }))
   })
   const setValue = (id: string, value: string) => { setValues(prev => ({ ...prev, [id]: value })); setSaved(false) }
   const saveResults = () => {
@@ -1953,7 +1953,7 @@ function ResultEntry({ bill, services, parameters, setPage }: { bill: any; servi
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px,1.2fr) minmax(160px,1fr) minmax(100px,.7fr)', gap: 14, alignItems: 'end' }}>
             <div><span style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{param.name}</span><small style={{ opacity: .65 }}>{item.name}{param.code ? ` · ${param.code}` : ''}</small></div>
             <label className="field"><span>Result</span><div className="field-wrap">
-              {param.resultType === 'Dropdown' ? <select value={values[`${item.id}-${param.id}`] || ''} onChange={e => setValue(`${item.id}-${param.id}`, e.target.value)}><option value="">Select result</option>{param.options.map(o => <option key={o}>{o}</option>)}</select> : param.resultType === 'Positive / Negative' ? <select value={values[`${item.id}-${param.id}`] || ''} onChange={e => setValue(`${item.id}-${param.id}`, e.target.value)}><option value="">Select</option><option>Positive</option><option>Negative</option></select> : param.resultType === 'Reactive / Non-Reactive' ? <select value={values[`${item.id}-${param.id}`] || ''} onChange={e => setValue(`${item.id}-${param.id}`, e.target.value)}><option value="">Select</option><option>Reactive</option><option>Non-Reactive</option></select> : <input type={param.resultType === 'Number' || param.resultType === 'Decimal' ? 'number' : 'text'} step={param.resultType === 'Decimal' ? 'any' : '1'} value={values[param.id] || ''} onChange={e => setValue(`${item.id}-${param.id}`, e.target.value)} placeholder={param.resultType} />}
+              {param.resultType === 'Dropdown' ? <select value={values[`${item.id}-${param.id}`] || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setValue(`${item.id}-${param.id}`, e.target.value)}><option value="">Select result</option>{param.options.map(o => <option key={o}>{o}</option>)}</select> : param.resultType === 'Positive / Negative' ? <select value={values[`${item.id}-${param.id}`] || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setValue(`${item.id}-${param.id}`, e.target.value)}><option value="">Select</option><option>Positive</option><option>Negative</option></select> : param.resultType === 'Reactive / Non-Reactive' ? <select value={values[`${item.id}-${param.id}`] || ''} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setValue(`${item.id}-${param.id}`, e.target.value)}><option value="">Select</option><option>Reactive</option><option>Non-Reactive</option></select> : <input type={param.resultType === 'Number' || param.resultType === 'Decimal' ? 'number' : 'text'} step={param.resultType === 'Decimal' ? 'any' : '1'} value={values[`${item.id}-${param.id}`] || ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setValue(`${item.id}-${param.id}`, e.target.value)} placeholder={param.resultType} />}
             </div></label>
             <div style={{ paddingBottom: 8 }}><small style={{ display: 'block', opacity: .65 }}>{param.unit || '—'}</small><b style={{ fontSize: 12 }}>{param.referenceText || (param.min || param.max ? `${param.min || '—'} – ${param.max || '—'}` : 'No range')}</b></div>
           </div>
