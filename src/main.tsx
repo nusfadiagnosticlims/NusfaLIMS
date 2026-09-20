@@ -69,18 +69,128 @@ type BillItem = {
   rate: number
 }
 
-const tests = [
-  { name: 'CBC (Complete Blood Count)', rate: 450, type: 'Test' as const },
-  { name: 'Liver Function Test', rate: 650, type: 'Test' as const },
-  { name: 'Kidney Function Test', rate: 600, type: 'Test' as const },
-  { name: 'Thyroid Profile', rate: 700, type: 'Test' as const },
-  { name: 'HbA1c', rate: 500, type: 'Test' as const },
-  { name: 'Lipid Profile', rate: 550, type: 'Test' as const },
-  { name: 'Vitamin D', rate: 900, type: 'Test' as const },
-  { name: 'Urine Routine', rate: 180, type: 'Test' as const },
-  { name: 'Full Body Basic', rate: 2200, type: 'Package' as const },
-  { name: 'Executive Health Package', rate: 3600, type: 'Package' as const },
-  { name: 'Diabetes Care Package', rate: 1400, type: 'Package' as const }
+type ServiceItem = {
+  id: string
+  code: string
+  name: string
+  type: 'Test' | 'Package'
+  category: string
+  sample: string
+  rate: number
+  status: 'Active' | 'Inactive'
+}
+
+const initialServices: ServiceItem[] = [
+  {
+    id: 'TST-001',
+    code: 'CBC',
+    name: 'CBC (Complete Blood Count)',
+    type: 'Test',
+    category: 'Hematology',
+    sample: 'EDTA Blood',
+    rate: 450,
+    status: 'Active'
+  },
+  {
+    id: 'TST-002',
+    code: 'LFT',
+    name: 'Liver Function Test',
+    type: 'Test',
+    category: 'Biochemistry',
+    sample: 'Serum',
+    rate: 650,
+    status: 'Active'
+  },
+  {
+    id: 'TST-003',
+    code: 'KFT',
+    name: 'Kidney Function Test',
+    type: 'Test',
+    category: 'Biochemistry',
+    sample: 'Serum',
+    rate: 600,
+    status: 'Active'
+  },
+  {
+    id: 'TST-004',
+    code: 'THY-P',
+    name: 'Thyroid Profile',
+    type: 'Test',
+    category: 'Hormones',
+    sample: 'Serum',
+    rate: 700,
+    status: 'Active'
+  },
+  {
+    id: 'TST-005',
+    code: 'HBA1C',
+    name: 'HbA1c',
+    type: 'Test',
+    category: 'Diabetes',
+    sample: 'EDTA Blood',
+    rate: 500,
+    status: 'Active'
+  },
+  {
+    id: 'TST-006',
+    code: 'LIPID',
+    name: 'Lipid Profile',
+    type: 'Test',
+    category: 'Biochemistry',
+    sample: 'Serum',
+    rate: 550,
+    status: 'Active'
+  },
+  {
+    id: 'TST-007',
+    code: 'VIT-D',
+    name: 'Vitamin D',
+    type: 'Test',
+    category: 'Vitamins',
+    sample: 'Serum',
+    rate: 900,
+    status: 'Active'
+  },
+  {
+    id: 'TST-008',
+    code: 'URINE-R',
+    name: 'Urine Routine',
+    type: 'Test',
+    category: 'Clinical Pathology',
+    sample: 'Urine',
+    rate: 180,
+    status: 'Active'
+  },
+  {
+    id: 'PKG-001',
+    code: 'FB-BASIC',
+    name: 'Full Body Basic',
+    type: 'Package',
+    category: 'Health Package',
+    sample: 'Multiple',
+    rate: 2200,
+    status: 'Active'
+  },
+  {
+    id: 'PKG-002',
+    code: 'EXEC-HP',
+    name: 'Executive Health Package',
+    type: 'Package',
+    category: 'Health Package',
+    sample: 'Multiple',
+    rate: 3600,
+    status: 'Active'
+  },
+  {
+    id: 'PKG-003',
+    code: 'DIAB-CARE',
+    name: 'Diabetes Care Package',
+    type: 'Package',
+    category: 'Health Package',
+    sample: 'Multiple',
+    rate: 1400,
+    status: 'Active'
+  }
 ]
 
 const initialActivities: ActivityItem[] = [
@@ -787,10 +897,12 @@ function Registration({
 
 function Billing({
   setPage,
-  onBill
+  onBill,
+  services
 }: {
   setPage: (p: Page) => void
   onBill: (b: any) => void
+  services: ServiceItem[]
 }) {
   const [q, setQ] = useState('')
   const [items, setItems] = useState<BillItem[]>([])
@@ -808,11 +920,13 @@ function Billing({
   const matches = useMemo(
     () =>
       q
-        ? tests.filter(x =>
-            x.name.toLowerCase().includes(q.toLowerCase())
+        ? services.filter(
+            x =>
+              x.status === 'Active' &&
+              x.name.toLowerCase().includes(q.toLowerCase())
           )
         : [],
-    [q]
+    [q, services]
   )
 
   const subtotal = items.reduce((s, x) => s + x.rate, 0)
@@ -1649,6 +1763,475 @@ function AddReferral({
   )
 }
 
+
+function TestsPage({
+  services,
+  setServices,
+  setPage
+}: {
+  services: ServiceItem[]
+  setServices: React.Dispatch<React.SetStateAction<ServiceItem[]>>
+  setPage: (p: Page) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('All')
+  const [status, setStatus] = useState('All')
+  const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState({
+    code: '',
+    name: '',
+    category: 'Hematology',
+    sample: 'Serum',
+    rate: '',
+    status: 'Active' as 'Active' | 'Inactive'
+  })
+
+  const testsOnly = services.filter(x => x.type === 'Test')
+  const categories = Array.from(new Set(testsOnly.map(x => x.category))).sort()
+
+  const filteredTests = testsOnly.filter(test => {
+    const q = query.trim().toLowerCase()
+    const matchesQuery =
+      !q ||
+      test.name.toLowerCase().includes(q) ||
+      test.code.toLowerCase().includes(q) ||
+      test.category.toLowerCase().includes(q)
+
+    const matchesCategory = category === 'All' || test.category === category
+    const matchesStatus = status === 'All' || test.status === status
+
+    return matchesQuery && matchesCategory && matchesStatus
+  })
+
+  const activeCount = testsOnly.filter(x => x.status === 'Active').length
+  const inactiveCount = testsOnly.filter(x => x.status === 'Inactive').length
+
+  const resetForm = () => {
+    setForm({
+      code: '',
+      name: '',
+      category: 'Hematology',
+      sample: 'Serum',
+      rate: '',
+      status: 'Active'
+    })
+    setEditingId(null)
+  }
+
+  const openAdd = () => {
+    resetForm()
+    setShowForm(true)
+  }
+
+  const openEdit = (test: ServiceItem) => {
+    setEditingId(test.id)
+    setForm({
+      code: test.code,
+      name: test.name,
+      category: test.category,
+      sample: test.sample,
+      rate: String(test.rate),
+      status: test.status
+    })
+    setShowForm(true)
+  }
+
+  const saveTest = () => {
+    const name = form.name.trim()
+    const code = form.code.trim().toUpperCase()
+    const rate = Number(form.rate)
+
+    if (!name || !code || !form.category || !form.sample || !rate) {
+      alert('Please fill Test Code, Test Name, Category, Sample Type and Price.')
+      return
+    }
+
+    if (editingId) {
+      setServices(prev =>
+        prev.map(item =>
+          item.id === editingId
+            ? {
+                ...item,
+                code,
+                name,
+                category: form.category,
+                sample: form.sample,
+                rate,
+                status: form.status
+              }
+            : item
+        )
+      )
+    } else {
+      const duplicate = testsOnly.some(
+        item => item.code.toLowerCase() === code.toLowerCase()
+      )
+
+      if (duplicate) {
+        alert('A test with this code already exists.')
+        return
+      }
+
+      setServices(prev => [
+        ...prev,
+        {
+          id: `TST-${Date.now()}`,
+          code,
+          name,
+          type: 'Test',
+          category: form.category,
+          sample: form.sample,
+          rate,
+          status: form.status
+        }
+      ])
+    }
+
+    setShowForm(false)
+    resetForm()
+  }
+
+  const deleteTest = (id: string) => {
+    const test = services.find(x => x.id === id)
+    if (!test) return
+
+    if (window.confirm(`Delete "${test.name}"?`)) {
+      setServices(prev => prev.filter(item => item.id !== id))
+    }
+  }
+
+  const toggleStatus = (id: string) => {
+    setServices(prev =>
+      prev.map(item =>
+        item.id === id && item.type === 'Test'
+          ? {
+              ...item,
+              status: item.status === 'Active' ? 'Inactive' : 'Active'
+            }
+          : item
+      )
+    )
+  }
+
+  return (
+    <div className="page tests-page">
+      <div className="page-intro">
+        <div>
+          <p className="eyebrow">LAB CATALOGUE</p>
+          <h1>Tests</h1>
+          <p>Manage laboratory tests, pricing, samples and availability.</p>
+        </div>
+
+        <button className="primary-btn" onClick={openAdd}>
+          <Plus /> Add new test
+        </button>
+      </div>
+
+      <div className="tests-summary">
+        <div className="tests-summary-card">
+          <div className="tests-summary-icon blue">
+            <TestTube2 />
+          </div>
+          <div>
+            <span>Total tests</span>
+            <strong>{testsOnly.length}</strong>
+          </div>
+        </div>
+
+        <div className="tests-summary-card">
+          <div className="tests-summary-icon green">
+            <Check />
+          </div>
+          <div>
+            <span>Active</span>
+            <strong>{activeCount}</strong>
+          </div>
+        </div>
+
+        <div className="tests-summary-card">
+          <div className="tests-summary-icon amber">
+            <Clock3 />
+          </div>
+          <div>
+            <span>Inactive</span>
+            <strong>{inactiveCount}</strong>
+          </div>
+        </div>
+      </div>
+
+      {showForm && (
+        <section className="form-panel test-form-panel">
+          <div className="form-section-head">
+            <div>
+              <h2>{editingId ? 'Edit test' : 'Add new test'}</h2>
+              <p>
+                {editingId
+                  ? 'Update the selected test and save the changes.'
+                  : 'Create a test that will also be available in billing.'}
+              </p>
+            </div>
+
+            <button className="mini-icon" onClick={() => setShowForm(false)}>
+              <X />
+            </button>
+          </div>
+
+          <div className="form-grid three">
+            <Field
+              label="Test Code"
+              required
+              value={form.code}
+              onChange={v => setForm({ ...form, code: v })}
+              placeholder="e.g. CBC"
+            />
+
+            <Field
+              label="Test Name"
+              required
+              value={form.name}
+              onChange={v => setForm({ ...form, name: v })}
+              placeholder="e.g. Complete Blood Count"
+            />
+
+            <label className="field">
+              <span>Category *</span>
+              <div className="field-wrap">
+                <select
+                  value={form.category}
+                  onChange={e =>
+                    setForm({ ...form, category: e.target.value })
+                  }
+                >
+                  {[
+                    'Hematology',
+                    'Biochemistry',
+                    'Hormones',
+                    'Diabetes',
+                    'Vitamins',
+                    'Clinical Pathology',
+                    'Microbiology',
+                    'Immunology',
+                    'Other'
+                  ].map(x => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+                <ChevronDown />
+              </div>
+            </label>
+
+            <label className="field">
+              <span>Sample Type *</span>
+              <div className="field-wrap">
+                <select
+                  value={form.sample}
+                  onChange={e =>
+                    setForm({ ...form, sample: e.target.value })
+                  }
+                >
+                  {[
+                    'Serum',
+                    'EDTA Blood',
+                    'Whole Blood',
+                    'Plasma',
+                    'Urine',
+                    'Stool',
+                    'Swab',
+                    'Multiple'
+                  ].map(x => (
+                    <option key={x}>{x}</option>
+                  ))}
+                </select>
+                <ChevronDown />
+              </div>
+            </label>
+
+            <Field
+              label="Price"
+              required
+              value={form.rate}
+              onChange={v => setForm({ ...form, rate: v })}
+              placeholder="e.g. 450"
+              type="number"
+              right={<span className="input-prefix">₹</span>}
+            />
+
+            <label className="field">
+              <span>Status</span>
+              <div className="field-wrap">
+                <select
+                  value={form.status}
+                  onChange={e =>
+                    setForm({
+                      ...form,
+                      status: e.target.value as 'Active' | 'Inactive'
+                    })
+                  }
+                >
+                  <option>Active</option>
+                  <option>Inactive</option>
+                </select>
+                <ChevronDown />
+              </div>
+            </label>
+          </div>
+
+          <div className="form-footer">
+            <button
+              className="secondary-btn"
+              onClick={() => {
+                setShowForm(false)
+                resetForm()
+              }}
+            >
+              Cancel
+            </button>
+
+            <button className="primary-btn" onClick={saveTest}>
+              <Check /> {editingId ? 'Update test' : 'Save test'}
+            </button>
+          </div>
+        </section>
+      )}
+
+      <section className="panel tests-panel">
+        <div className="tests-toolbar">
+          <div className="search-service tests-search">
+            <Search />
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search by test name, code or category…"
+            />
+          </div>
+
+          <label className="filter-select">
+            <span>Category</span>
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+            >
+              <option>All</option>
+              {categories.map(x => (
+                <option key={x}>{x}</option>
+              ))}
+            </select>
+            <ChevronDown />
+          </label>
+
+          <label className="filter-select">
+            <span>Status</span>
+            <select value={status} onChange={e => setStatus(e.target.value)}>
+              <option>All</option>
+              <option>Active</option>
+              <option>Inactive</option>
+            </select>
+            <ChevronDown />
+          </label>
+        </div>
+
+        <div className="tests-table-wrap">
+          <table className="tests-table">
+            <thead>
+              <tr>
+                <th>Test</th>
+                <th>Code</th>
+                <th>Category</th>
+                <th>Sample</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredTests.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <div className="tests-empty">
+                      <TestTube2 />
+                      <b>No tests found</b>
+                      <span>Try another search or add a new test.</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredTests.map(test => (
+                  <tr key={test.id}>
+                    <td>
+                      <div className="test-name-cell">
+                        <div className="test-row-icon">
+                          <TestTube2 />
+                        </div>
+                        <div>
+                          <b>{test.name}</b>
+                          <span>{test.type}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="test-code">{test.code}</span>
+                    </td>
+                    <td>{test.category}</td>
+                    <td>{test.sample}</td>
+                    <td>
+                      <strong>
+                        ₹{test.rate.toLocaleString('en-IN')}
+                      </strong>
+                    </td>
+                    <td>
+                      <button
+                        className={
+                          'status-pill ' +
+                          (test.status === 'Active' ? 'active' : 'inactive')
+                        }
+                        onClick={() => toggleStatus(test.id)}
+                        title="Click to change status"
+                      >
+                        <i />
+                        {test.status}
+                      </button>
+                    </td>
+                    <td>
+                      <div className="test-actions">
+                        <button
+                          className="mini-icon"
+                          title="Edit test"
+                          onClick={() => openEdit(test)}
+                        >
+                          <Settings2 />
+                        </button>
+                        <button
+                          className="mini-icon danger"
+                          title="Delete test"
+                          onClick={() => deleteTest(test.id)}
+                        >
+                          <Trash2 />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="tests-footer">
+          <span>
+            Showing <b>{filteredTests.length}</b> of{' '}
+            <b>{testsOnly.length}</b> tests
+          </span>
+          <button className="text-btn" onClick={() => setPage('billing')}>
+            Open billing <ArrowRight />
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function Placeholder({
   title,
   icon: Icon,
@@ -1692,6 +2275,19 @@ function App() {
     useState<ActivityItem[]>(initialActivities)
 
   const [bills, setBills] = useState(initialBills)
+
+  const [services, setServices] = useState<ServiceItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('nusfaServices')
+      return saved ? JSON.parse(saved) : initialServices
+    } catch {
+      return initialServices
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('nusfaServices', JSON.stringify(services))
+  }, [services])
 
   const [bill, setBill] = useState<any>(null)
 
@@ -1747,6 +2343,7 @@ function App() {
           <Billing
             setPage={setPage}
             onBill={onBill}
+            services={services}
           />
         )}
 
@@ -1774,9 +2371,9 @@ function App() {
         )}
 
         {page === 'tests' && (
-          <Placeholder
-            title="Tests"
-            icon={TestTube2}
+          <TestsPage
+            services={services}
+            setServices={setServices}
             setPage={setPage}
           />
         )}
